@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>登录 · CampusClaw</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 360px; margin: 80px auto; padding: 0 16px; }
+    h1 { font-size: 1.4rem; }
+    label { display: block; margin: 12px 0 4px; }
+    input { width: 100%; padding: 8px; box-sizing: border-box; }
+    button { margin-top: 16px; padding: 8px 16px; width: 100%; }
+    .error { color: #b00020; margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <h1>CampusClaw 登录</h1>
+  <form method="post" action="{{ url_for('auth.login') }}">
+    <label for="username">用户名</label>
+    <input id="username" name="username" autocomplete="username" required>
+    <label for="password">密码</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required>
+    <button type="submit">登录</button>
+  </form>
+  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+</body>
+</html>

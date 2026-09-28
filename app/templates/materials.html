@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>本班材料 · CampusClaw</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 760px; margin: 40px auto; padding: 0 16px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 16px; }
+    th, td { border-bottom: 1px solid #ddd; text-align: left; padding: 8px; }
+    .toolbar { display: flex; justify-content: space-between; align-items: center; }
+    form.upload { margin-top: 24px; padding-top: 16px; border-top: 1px solid #eee; }
+    input[type=text], input[type=file] { padding: 6px; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <h1>本班材料</h1>
+    <form method="post" action="{{ url_for('auth.logout') }}">
+      <button type="submit">退出登录</button>
+    </form>
+  </div>
+
+  <p>当前用户：{{ session.username }}（{{ role }}）</p>
+
+  {% if materials %}
+  <table>
+    <thead><tr><th>#</th><th>标题</th></tr></thead>
+    <tbody>
+      {% for material in materials %}
+      <tr>
+        <td>{{ material.id }}</td>
+        <td><a href="{{ url_for('materials.detail', material_id=material.id) }}">{{ material.title }}</a></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p>本班暂无材料。</p>
+  {% endif %}
+
+  {% if role == 'teacher' %}
+  <form class="upload" method="post" action="{{ url_for('materials.api_upload') }}" enctype="multipart/form-data">
+    <h2>上传材料</h2>
+    <p><input type="text" name="title" placeholder="标题（可选，默认取文件名）"></p>
+    <p><input type="file" name="file" accept=".txt,.md" required></p>
+    <button type="submit">上传</button>
+  </form>
+  {% endif %}
+</body>
+</html>

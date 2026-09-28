@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ material.title }} · CampusClaw</title>
+</head>
+<body>
+  <p><a href="{{ url_for('materials.index') }}">← 返回本班材料</a></p>
+  <h1>{{ material.title }}</h1>
+  <ul>
+    <li>材料 ID：{{ material.id }}</li>
+    <li>班级 ID：{{ material.class_id }}</li>
+    <li>上传时间：{{ material.created_at }}</li>
+  </ul>
+</body>
+</html>
