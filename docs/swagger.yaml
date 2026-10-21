@@ -1,0 +1,1182 @@
+basePath: /
+definitions:
+  auth.authErrorBody:
+    properties:
+      error:
+        example: invalid credentials
+        type: string
+    type: object
+  auth.authLoginResponse:
+    properties:
+      token:
+        type: string
+      user:
+        $ref: '#/definitions/auth.authUserBody'
+    type: object
+  auth.authMeResponse:
+    properties:
+      user:
+        $ref: '#/definitions/auth.authUserBody'
+    type: object
+  auth.authOKResponse:
+    properties:
+      status:
+        example: ok
+        type: string
+    type: object
+  auth.authUserBody:
+    properties:
+      class_id:
+        example: 1
+        type: integer
+      display_name:
+        example: 教师 A
+        type: string
+      id:
+        example: 1
+        type: integer
+      role:
+        example: teacher
+        type: string
+      username:
+        example: teacher_a
+        type: string
+    type: object
+  auth.loginRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+  chat.Message:
+    properties:
+      content:
+        type: string
+      role:
+        type: string
+    type: object
+  httpapi.ChunkParams:
+    properties:
+      chunk_collapse_ws:
+        type: boolean
+      chunk_max_chars:
+        type: integer
+      chunk_overlap_percent:
+        type: integer
+      chunk_separator:
+        type: string
+      chunk_strategy:
+        type: string
+      chunk_strip_links:
+        type: boolean
+    type: object
+  httpapi.agentListResponse:
+    properties:
+      agents:
+        items:
+          $ref: '#/definitions/store.Agent'
+        type: array
+    type: object
+  httpapi.agentRequest:
+    properties:
+      enabled:
+        type: boolean
+      material_ids:
+        items:
+          type: integer
+        type: array
+      name:
+        type: string
+      prompt:
+        type: string
+      skill_ids:
+        items:
+          type: integer
+        type: array
+    type: object
+  httpapi.askRequest:
+    properties:
+      history:
+        items:
+          $ref: '#/definitions/chat.Message'
+        type: array
+      q:
+        type: string
+    type: object
+  httpapi.askResponse:
+    properties:
+      answer:
+        type: string
+      citations:
+        items:
+          $ref: '#/definitions/httpapi.citation'
+        type: array
+      status:
+        example: ok
+        type: string
+    type: object
+  httpapi.citation:
+    properties:
+      chunk_id:
+        type: integer
+      chunk_index:
+        type: integer
+      end_offset:
+        type: integer
+      marker:
+        type: string
+      material_id:
+        type: integer
+      material_title:
+        type: string
+      start_offset:
+        type: integer
+    type: object
+  httpapi.conversationDetailResponse:
+    properties:
+      conversation:
+        $ref: '#/definitions/store.Conversation'
+      messages:
+        items:
+          $ref: '#/definitions/httpapi.messageView'
+        type: array
+    type: object
+  httpapi.conversationListResponse:
+    properties:
+      conversations:
+        items:
+          $ref: '#/definitions/store.Conversation'
+        type: array
+    type: object
+  httpapi.createConversationRequest:
+    properties:
+      agent_id:
+        type: integer
+    type: object
+  httpapi.errorBody:
+    properties:
+      error:
+        example: not found
+        type: string
+    type: object
+  httpapi.exampleListResponse:
+    properties:
+      examples:
+        items:
+          $ref: '#/definitions/httpapi.exampleQuestion'
+        type: array
+    type: object
+  httpapi.exampleQuestion:
+    properties:
+      no_evidence:
+        type: boolean
+      text:
+        type: string
+    type: object
+  httpapi.materialDetailResponse:
+    properties:
+      body_text:
+        type: string
+      material:
+        $ref: '#/definitions/store.Material'
+    type: object
+  httpapi.materialListResponse:
+    properties:
+      materials:
+        items:
+          $ref: '#/definitions/store.Material'
+        type: array
+      page:
+        example: 1
+        type: integer
+      page_size:
+        example: 20
+        type: integer
+      total:
+        example: 3
+        type: integer
+    type: object
+  httpapi.messageView:
+    properties:
+      citations:
+        items:
+          $ref: '#/definitions/httpapi.citation'
+        type: array
+      content:
+        example: 移项怎么做
+        type: string
+      conversation_id:
+        example: 1
+        type: integer
+      created_at:
+        type: string
+      id:
+        example: 1
+        type: integer
+      role:
+        example: user
+        type: string
+      skill_name:
+        example: 数学解题引导
+        type: string
+    type: object
+  httpapi.reindexResponse:
+    properties:
+      chunk_count:
+        example: 4
+        type: integer
+      material_id:
+        example: 1
+        type: integer
+    type: object
+  httpapi.searchRequest:
+    properties:
+      limit:
+        type: integer
+      mode:
+        type: string
+      offset:
+        type: integer
+      q:
+        type: string
+    type: object
+  httpapi.searchResponse:
+    properties:
+      hits:
+        items:
+          $ref: '#/definitions/retrieval.Hit'
+        type: array
+      message:
+        type: string
+      query_vector:
+        items:
+          type: number
+        type: array
+      status:
+        type: string
+    type: object
+  httpapi.sendMessageRequest:
+    properties:
+      content:
+        type: string
+    type: object
+  httpapi.skillListResponse:
+    properties:
+      skills:
+        items:
+          $ref: '#/definitions/store.Skill'
+        type: array
+    type: object
+  httpapi.skillRequest:
+    properties:
+      source:
+        type: string
+    type: object
+  httpapi.uploadResponse:
+    properties:
+      chunk_count:
+        example: 4
+        type: integer
+      chunk_strategy:
+        example: auto
+        type: string
+      indexing:
+        type: string
+      material_id:
+        example: 1
+        type: integer
+      title:
+        example: A 班-数学自学笔记
+        type: string
+    type: object
+  httpapi.vectorChunkView:
+    properties:
+      chunk_id:
+        example: 1
+        type: integer
+      chunk_index:
+        example: 0
+        type: integer
+      dimension:
+        example: 2048
+        type: integer
+      embedding_model:
+        type: string
+      end_offset:
+        example: 17
+        type: integer
+      index_status:
+        example: ready
+        type: string
+      knowledge_entry_id:
+        example: 1
+        type: integer
+      material_id:
+        example: 1
+        type: integer
+      material_title:
+        example: A 班-数学自学笔记
+        type: string
+      payload:
+        $ref: '#/definitions/httpapi.vectorPayload'
+      start_offset:
+        example: 0
+        type: integer
+    type: object
+  httpapi.vectorPayload:
+    properties:
+      chunk_id:
+        example: 1
+        type: integer
+      chunk_index:
+        example: 0
+        type: integer
+      class_id:
+        example: 1
+        type: integer
+      knowledge_entry_id:
+        example: 1
+        type: integer
+      material_id:
+        example: 1
+        type: integer
+    type: object
+  httpapi.vectorResponse:
+    properties:
+      chunks:
+        items:
+          $ref: '#/definitions/httpapi.vectorChunkView'
+        type: array
+    type: object
+  retrieval.Hit:
+    properties:
+      chunk_id:
+        type: integer
+      chunk_index:
+        type: integer
+      end_offset:
+        type: integer
+      material_id:
+        type: integer
+      material_title:
+        type: string
+      score:
+        type: number
+      snippet:
+        type: string
+      start_offset:
+        type: integer
+    type: object
+  store.Agent:
+    properties:
+      class_id:
+        type: integer
+      created_at:
+        type: string
+      enabled:
+        type: boolean
+      id:
+        type: integer
+      material_ids:
+        items:
+          type: integer
+        type: array
+      name:
+        type: string
+      prompt:
+        type: string
+      skill_ids:
+        items:
+          type: integer
+        type: array
+      updated_at:
+        type: string
+    type: object
+  store.Conversation:
+    properties:
+      agent_id:
+        type: integer
+      class_id:
+        type: integer
+      created_at:
+        type: string
+      id:
+        type: integer
+      title:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  store.Material:
+    properties:
+      class_id:
+        type: integer
+      created_at:
+        type: string
+      file_path:
+        type: string
+      id:
+        type: integer
+      title:
+        type: string
+      uploaded_by:
+        type: integer
+    type: object
+  store.Skill:
+    properties:
+      class_id:
+        type: integer
+      created_at:
+        type: string
+      description:
+        type: string
+      enabled:
+        type: boolean
+      id:
+        type: integer
+      name:
+        type: string
+      source:
+        type: string
+      subject:
+        type: string
+      tools:
+        items:
+          type: string
+        type: array
+      trigger:
+        type: string
+      updated_at:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: CampusClaw 教学平台接口：认证、材料与知识库检索、智能体与技能、会话与流式问答。
+  title: CampusClaw API
+  version: "1.0"
+paths:
+  /api/agents:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httpapi.agentListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+      security:
+      - BearerAuth: []
+      summary: 列出本班智能体
+      tags:
+      - agents
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 智能体
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httpapi.agentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/store.Agent'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+      security:
+      - BearerAuth: []
+      summary: 新建智能体
+      tags:
+      - agents
+  /api/agents/{id}:
+    get:
+      parameters:
+      - description: 智能体编号
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/store.Agent'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+      security:
+      - BearerAuth: []
+      summary: 读取一个智能体
+      tags:
+      - agents
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: 智能体编号
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 智能体
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httpapi.agentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/store.Agent'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+      security:
+      - BearerAuth: []
+      summary: 修改智能体
+      tags:
+      - agents
+  /api/ask:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 问答请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httpapi.askRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httpapi.askResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+      security:
+      - BearerAuth: []
+      summary: 按本班资料作简短回答
+      tags:
+      - retrieval
+  /api/conversations:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httpapi.conversationListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+      security:
+      - BearerAuth: []
+      summary: 列出我的会话
+      tags:
+      - conversations
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 智能体编号
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httpapi.createConversationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/store.Conversation'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+      security:
+      - BearerAuth: []
+      summary: 按智能体新建会话
+      tags:
+      - conversations
+  /api/conversations/{id}:
+    get:
+      parameters:
+      - description: 会话编号
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httpapi.conversationDetailResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+      security:
+      - BearerAuth: []
+      summary: 读取会话和消息
+      tags:
+      - conversations
+  /api/conversations/{id}/messages:
+    post:
+      consumes:
+      - application/json
+      description: 以 text/event-stream 返回 meta / delta / done / error 四类事件。
+      parameters:
+      - description: 会话编号
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 提问
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httpapi.sendMessageRequest'
+      produces:
+      - text/event-stream
+      responses:
+        "200":
+          description: SSE 事件流
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+      security:
+      - BearerAuth: []
+      summary: 在会话中继续提问（SSE 流式）
+      tags:
+      - conversations
+  /api/examples:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httpapi.exampleListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+      security:
+      - BearerAuth: []
+      summary: 列出示例问句
+      tags:
+      - retrieval
+  /api/login:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 登录凭据
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/auth.loginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.authLoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/auth.authErrorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/auth.authErrorBody'
+      summary: 登录并签发访问令牌
+      tags:
+      - auth
+  /api/logout:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.authOKResponse'
+      security:
+      - BearerAuth: []
+      summary: 登出并吊销当前令牌
+      tags:
+      - auth
+  /api/materials:
+    get:
+      parameters:
+      - description: 页码
+        in: query
+        name: page
+        type: integer
+      - description: 每页条数
+        in: query
+        name: page_size
+        type: integer
+      - description: 标题筛选
+        in: query
+        name: title
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httpapi.materialListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+      security:
+      - BearerAuth: []
+      summary: 分页列出本班材料
+      tags:
+      - materials
+    post:
+      consumes:
+      - multipart/form-data
+      parameters:
+      - description: 材料文件（.txt/.md）
+        in: formData
+        name: file
+        required: true
+        type: file
+      - description: 标题
+        in: formData
+        name: title
+        type: string
+      - description: 切片策略：auto/custom/hierarchy
+        in: formData
+        name: chunk_strategy
+        type: string
+      - description: 自定义分隔符
+        in: formData
+        name: chunk_separator
+        type: string
+      - description: 最大切片长度
+        in: formData
+        name: chunk_max_chars
+        type: integer
+      - description: 重叠比例
+        in: formData
+        name: chunk_overlap_percent
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/httpapi.uploadResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+      security:
+      - BearerAuth: []
+      summary: 教师上传本班材料
+      tags:
+      - materials
+  /api/materials/{id}:
+    get:
+      parameters:
+      - description: 材料编号
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httpapi.materialDetailResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+      security:
+      - BearerAuth: []
+      summary: 读取本班材料详情
+      tags:
+      - materials
+  /api/materials/{id}/reindex:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 材料编号
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 切片参数
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/httpapi.ChunkParams'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httpapi.reindexResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+      security:
+      - BearerAuth: []
+      summary: 重建本班某一材料的切片和向量
+      tags:
+      - materials
+  /api/materials/{id}/vectors:
+    get:
+      parameters:
+      - description: 材料编号
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httpapi.vectorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+      security:
+      - BearerAuth: []
+      summary: 查看本班材料的向量记录
+      tags:
+      - materials
+  /api/me:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/auth.authMeResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/auth.authErrorBody'
+      security:
+      - BearerAuth: []
+      summary: 读取当前登录用户
+      tags:
+      - auth
+  /api/search:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 检索请求
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httpapi.searchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httpapi.searchResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+      security:
+      - BearerAuth: []
+      summary: 检索本班切片
+      tags:
+      - retrieval
+  /api/skills:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httpapi.skillListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+      security:
+      - BearerAuth: []
+      summary: 列出本班技能
+      tags:
+      - skills
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: 技能文件原文
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httpapi.skillRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/store.Skill'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+      security:
+      - BearerAuth: []
+      summary: 用技能文件新建技能
+      tags:
+      - skills
+  /api/skills/{id}:
+    delete:
+      parameters:
+      - description: 技能编号
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+      security:
+      - BearerAuth: []
+      summary: 删除本班技能
+      tags:
+      - skills
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: 技能编号
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 技能文件原文
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/httpapi.skillRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/store.Skill'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/httpapi.errorBody'
+      security:
+      - BearerAuth: []
+      summary: 用技能文件改写技能
+      tags:
+      - skills
+securityDefinitions:
+  BearerAuth:
+    description: 输入 "Bearer <token>"
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

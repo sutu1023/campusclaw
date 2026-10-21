@@ -1,0 +1,10 @@
+.git
+.gitignore
+.env
+**/node_modules
+web/dist
+data
+uploads
+apitest/report
+**/__pycache__
+*.md

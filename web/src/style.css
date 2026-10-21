@@ -1,0 +1,119 @@
+:root {
+  font-family: system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  color: var(--text);
+  background: var(--bg);
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+}
+
+a {
+  color: var(--pku-red);
+}
+
+a:hover {
+  color: var(--pku-red-hover);
+}
+
+h1,
+h2,
+h3 {
+  color: var(--pku-red);
+}
+
+button {
+  background: var(--pku-red);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: var(--pku-red-hover);
+}
+
+button.secondary {
+  background: #fff;
+  color: var(--pku-red);
+  border: 1px solid var(--pku-red);
+}
+
+input,
+select,
+textarea {
+  padding: 8px;
+  border: 1px solid var(--pku-border);
+  border-radius: 6px;
+  font: inherit;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid var(--pku-red-alt);
+  border-color: var(--pku-red-alt);
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 16px 48px;
+}
+
+nav.topbar {
+  background: var(--pku-red);
+  color: #fff;
+  padding: 12px 16px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+nav.topbar .brand {
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+nav.topbar a {
+  color: #fff;
+  text-decoration: none;
+}
+
+nav.topbar a.router-link-active {
+  text-decoration: underline;
+}
+
+nav.topbar .spacer {
+  flex: 1;
+}
+
+.card {
+  border: 1px solid var(--pku-border);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.error {
+  color: var(--pku-red);
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th,
+td {
+  border-bottom: 1px solid var(--pku-border);
+  text-align: left;
+  padding: 8px;
+}

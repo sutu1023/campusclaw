@@ -1,0 +1,15 @@
+/*
+ * Peking University red theme tokens. Main colour #94070A, secondary #BE2126.
+ * Primary red is used for emphasis (buttons, links, headings); body text stays
+ * near-black on white to keep WCAG AA contrast.
+ */
+:root {
+  --pku-red: #94070a;
+  --pku-red-alt: #be2126;
+  --pku-red-hover: #7a0508;
+  --pku-red-soft: #fbeaea;
+  --pku-border: #e6d5d5;
+  --text: #1a1a1a;
+  --muted: #5b5b5b;
+  --bg: #ffffff;
+}

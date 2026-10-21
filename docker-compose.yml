@@ -1,24 +1,59 @@
 services:
-  app:
-    build: .
-    ports:
-      - "8080:8080"
+  db:
+    image: mysql:8.0
+    # ngram token size 2 is required by the keyword full-text index.
+    command: ["--ngram-token-size=2"]
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-campusclaw}
+      MYSQL_USER: ${MYSQL_USER:-campusclaw}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-campusclaw}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+    # No host port mapping: the database is reachable only inside the network.
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    volumes:
+      - qdrant_data:/qdrant/storage
+    restart: unless-stopped
+    # No host port mapping: only the api talks to Qdrant.
+
+  api:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.api
     env_file:
       - .env
     environment:
-      DATABASE_PATH: /app/data/app.db
+      DB_DSN: ${MYSQL_USER:-campusclaw}:${MYSQL_PASSWORD:-campusclaw}@tcp(db:3306)/${MYSQL_DATABASE:-campusclaw}?parseTime=true
       UPLOAD_DIR: /app/uploads
+      QDRANT_URL: http://qdrant:6333
     volumes:
-      - ./data:/app/data
       - ./uploads:/app/uploads
-    healthcheck:
-      test:
-        - CMD
-        - python
-        - -c
-        - "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8080/health').status == 200 else 1)"
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
+    depends_on:
+      db:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
     restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.web
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+  qdrant_data:
