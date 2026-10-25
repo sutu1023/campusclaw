@@ -1,9 +1,17 @@
 <script setup lang="ts">
+import { watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { apiFetch, setToken } from './api'
+import { apiFetch, loadSessionRole, sessionRole, setToken } from './api'
 
 const route = useRoute()
 const router = useRouter()
+
+watch(() => route.fullPath, async () => {
+  sessionRole.value = ''
+  if (!route.meta.public) {
+    try { await loadSessionRole() } catch { sessionRole.value = '' }
+  }
+}, { immediate: true })
 
 async function logout(): Promise<void> {
   try {
@@ -21,16 +29,42 @@ async function logout(): Promise<void> {
 </script>
 
 <template>
-  <nav v-if="!route.meta.public" class="topbar">
+  <nav
+    v-if="!route.meta.public"
+    class="topbar"
+  >
     <span class="brand">CampusClaw</span>
-    <router-link to="/materials">材料</router-link>
-    <router-link to="/search">检索</router-link>
-    <router-link to="/ask">问答</router-link>
-    <router-link to="/agents">智能体</router-link>
-    <router-link to="/skills">技能</router-link>
-    <router-link to="/conversations">会话</router-link>
+    <router-link to="/materials">
+      材料
+    </router-link>
+    <router-link to="/search">
+      检索
+    </router-link>
+    <router-link to="/ask">
+      问答
+    </router-link>
+    <router-link to="/agents">
+      智能体
+    </router-link>
+    <router-link to="/skills">
+      技能
+    </router-link>
+    <router-link
+      v-if="sessionRole === 'teacher'"
+      to="/mcp"
+    >
+      MCP 工具
+    </router-link>
+    <router-link to="/conversations">
+      会话
+    </router-link>
     <span class="spacer" />
-    <button class="secondary" @click="logout">退出登录</button>
+    <button
+      class="secondary"
+      @click="logout"
+    >
+      退出登录
+    </button>
   </nav>
   <div class="container">
     <router-view />

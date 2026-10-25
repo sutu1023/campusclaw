@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"campusclaw/internal/embed"
+	"campusclaw/internal/toolrun"
 )
 
 // splitAnswer breaks an answer into a few fragments so the stub gateway emits
@@ -144,11 +145,12 @@ func (e *testEnv) messages(t *testing.T, token string, convID int64) []storeMess
 }
 
 type storeMessage struct {
-	ID        int64           `json:"id"`
-	Role      string          `json:"role"`
-	Content   string          `json:"content"`
-	Citations json.RawMessage `json:"citations"`
-	SkillName string          `json:"skill_name"`
+	ID        int64                 `json:"id"`
+	Role      string                `json:"role"`
+	Content   string                `json:"content"`
+	Citations json.RawMessage       `json:"citations"`
+	SkillName string                `json:"skill_name"`
+	ToolCalls []toolrun.CallSummary `json:"tool_calls"`
 }
 
 // TestStreamingAnswerLifecycle covers tasks 6.1 and 6.3: meta arrives first,
@@ -176,9 +178,9 @@ func TestStreamingAnswerLifecycle(t *testing.T) {
 	}
 
 	var meta struct {
-		Status    string     `json:"status"`
+		Status    string                 `json:"status"`
 		Skill     *struct{ Name string } `json:"skill"`
-		Citations []citation `json:"citations"`
+		Citations []citation             `json:"citations"`
 	}
 	_ = json.Unmarshal(events[0].Data, &meta)
 	if meta.Status != "ok" || meta.Skill == nil || meta.Skill.Name != "几何解题引导" {
@@ -194,12 +196,16 @@ func TestStreamingAnswerLifecycle(t *testing.T) {
 	for _, ev := range events[1:] {
 		switch ev.Event {
 		case "delta":
-			var p struct{ Text string `json:"text"` }
+			var p struct {
+				Text string `json:"text"`
+			}
 			_ = json.Unmarshal(ev.Data, &p)
 			deltas.WriteString(p.Text)
 			deltaCount++
 		case "done":
-			var p struct{ MessageID int64 `json:"message_id"` }
+			var p struct {
+				MessageID int64 `json:"message_id"`
+			}
 			_ = json.Unmarshal(ev.Data, &p)
 			doneID = p.MessageID
 		}
@@ -406,7 +412,9 @@ func TestStreamingBoundariesAndRouting(t *testing.T) {
 	var answer strings.Builder
 	for _, ev := range events2 {
 		if ev.Event == "delta" {
-			var p struct{ Text string `json:"text"` }
+			var p struct {
+				Text string `json:"text"`
+			}
 			_ = json.Unmarshal(ev.Data, &p)
 			answer.WriteString(p.Text)
 		}

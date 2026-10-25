@@ -72,10 +72,19 @@ func decodeTools(raw string) []string {
 
 // CreateSkill inserts a teacher-authored skill for a class.
 func (s *Store) CreateSkill(ctx context.Context, ns NewSkill) (*Skill, error) {
-	res, err := s.DB.ExecContext(ctx,
+	tx, err := s.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	tools, err := validateSkillTools(ctx, tx, ns.ClassID, ns.Tools)
+	if err != nil {
+		return nil, err
+	}
+	res, err := tx.ExecContext(ctx,
 		`INSERT INTO skills (class_id, name, trigger_text, description, tools_json, source_text, subject_text, enabled)
 		 VALUES (?,?,?,?,?,?,?,?)`,
-		ns.ClassID, ns.Name, ns.Trigger, ns.Description, encodeTools(ns.Tools), ns.Source, ns.Subject, boolInt(ns.Enabled))
+		ns.ClassID, ns.Name, ns.Trigger, ns.Description, encodeTools(tools), ns.Source, ns.Subject, boolInt(ns.Enabled))
 	if err != nil {
 		if isDuplicateKey(err) {
 			return nil, ErrDuplicate
@@ -86,26 +95,43 @@ func (s *Store) CreateSkill(ctx context.Context, ns NewSkill) (*Skill, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
 	return s.GetSkill(ctx, ns.ClassID, id)
 }
 
 // UpdateSkill replaces a skill's fields, scoped to the caller's class.
 func (s *Store) UpdateSkill(ctx context.Context, classID, id int64, ns NewSkill) (*Skill, error) {
-	res, err := s.DB.ExecContext(ctx,
+	tx, err := s.DB.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	var existing int64
+	err = tx.QueryRowContext(ctx, `SELECT id FROM skills WHERE class_id=? AND id=? FOR UPDATE`, classID, id).Scan(&existing)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	tools, err := validateSkillTools(ctx, tx, classID, ns.Tools)
+	if err != nil {
+		return nil, err
+	}
+	_, err = tx.ExecContext(ctx,
 		`UPDATE skills SET name=?, trigger_text=?, description=?, tools_json=?, source_text=?, subject_text=?, enabled=?
 		 WHERE id=? AND class_id=?`,
-		ns.Name, ns.Trigger, ns.Description, encodeTools(ns.Tools), ns.Source, ns.Subject, boolInt(ns.Enabled), id, classID)
+		ns.Name, ns.Trigger, ns.Description, encodeTools(tools), ns.Source, ns.Subject, boolInt(ns.Enabled), id, classID)
 	if err != nil {
 		if isDuplicateKey(err) {
 			return nil, ErrDuplicate
 		}
 		return nil, fmt.Errorf("update skill: %w", err)
 	}
-	if n, _ := res.RowsAffected(); n == 0 {
-		// Either the row is missing or nothing changed; confirm existence.
-		if _, err := s.GetSkill(ctx, classID, id); err != nil {
-			return nil, err
-		}
+	if err := tx.Commit(); err != nil {
+		return nil, err
 	}
 	return s.GetSkill(ctx, classID, id)
 }

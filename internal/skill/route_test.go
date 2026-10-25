@@ -63,6 +63,21 @@ func TestRouteSkipsDisabled(t *testing.T) {
 	}
 }
 
+func TestRoutePreservesSelectedToolsWithoutChangingScoring(t *testing.T) {
+	candidates := []Entry{
+		{ID: 1, Name: "Selected", Trigger: "公式", Tools: []string{"formula_hint@first-server"}, Enabled: true},
+		{ID: 2, Name: "Tie", Trigger: "公式", Tools: []string{"unit_convert@second-server"}, Enabled: true},
+		{ID: 3, Name: "Disabled", Trigger: "公式,单位", Tools: []string{"hidden@third-server"}, Enabled: false},
+	}
+	got := Route("公式和单位怎么用", candidates)
+	if got == nil || got.ID != 1 || len(got.Tools) != 1 || got.Tools[0] != "formula_hint@first-server" {
+		t.Fatalf("selected tool set or tie/disabled rules changed: %+v", got)
+	}
+	if got := Route("不匹配的问题", candidates); got != nil {
+		t.Fatal("zero-score question acquired tool references")
+	}
+}
+
 func TestRouteEmptyCandidates(t *testing.T) {
 	if got := Route("方程", nil); got != nil {
 		t.Fatalf("expected nil for no candidates, got %+v", got)

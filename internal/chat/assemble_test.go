@@ -27,6 +27,24 @@ func TestBuildSystemWithGuidingSkill(t *testing.T) {
 	}
 }
 
+func TestToolDataBoundaryIsLastAndResultsStayInToolRole(t *testing.T) {
+	matched := &skill.Entry{Name: "公式解题引导", Description: "只提示条件", Tools: []string{"formula_hint@campus-tools"}, Enabled: true}
+	system := BuildSystem("本班教师角色", matched, true)
+	for _, source := range []string{"检索正文", "材料标题", "技能说明", "工具说明", "远端工具结果"} {
+		if !strings.Contains(system, source) {
+			t.Fatal("untrusted source missing from fixed boundary")
+		}
+	}
+	if !strings.HasSuffix(system, dataBoundary) || !strings.Contains(system, "不得写出最终答案") {
+		t.Fatal("boundary position or guiding constraint changed")
+	}
+	messages := HostMessages([]Message{{Role: "system", Content: system}, {Role: "user", Content: BuildUser("问题", []Evidence{{MaterialTitle: "本班材料", Text: "EVIDENCE_DATA"}})}})
+	messages = append(messages, HostAssistantCalls([]ToolCall{{ID: "host_1", Type: "function", Function: FunctionCall{Name: "allowed_alias", Arguments: `{}`}}}), HostToolResult("host_1", `{"source":"formula_hint@campus-tools","data":"TOOL_DATA"}`))
+	if strings.Contains(messages[0].Content, "EVIDENCE_DATA") || strings.Contains(messages[0].Content, "TOOL_DATA") || !strings.Contains(messages[1].Content, "EVIDENCE_DATA") || messages[3].Role != "tool" || messages[3].ToolCallID != messages[2].ToolCalls[0].ID {
+		t.Fatal("external data elevated to privileged role")
+	}
+}
+
 func TestBuildSystemWithoutSkillOrEvidence(t *testing.T) {
 	sys := BuildSystem("", nil, false)
 	if !strings.Contains(sys, DefaultRolePrompt) {

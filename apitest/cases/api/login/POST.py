@@ -24,6 +24,7 @@ def run(ctx):
         json_body={"username": "student_a1", "password": "CampusClaw#2026"},
     )
     ctx["student_token"] = student.json().get("token")
+    ctx["student_id"] = student.json().get("user", {}).get("id")
     results.append(("学生登录返回访问令牌", bool(ctx["student_token"])))
 
     wrong = request(

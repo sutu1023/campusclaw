@@ -25,6 +25,21 @@ services:
     restart: unless-stopped
     # No host port mapping: only the api talks to Qdrant.
 
+  mcp-demo:
+    build:
+      context: .
+      dockerfile: mcp-server/Dockerfile
+    environment:
+      MCP_AUTH_TOKEN: ${MCP_AUTH_TOKEN:-}
+    healthcheck:
+      test: ["CMD", "/mcp-server", "--healthcheck"]
+      interval: 5s
+      timeout: 3s
+      start_period: 5s
+      retries: 5
+    restart: unless-stopped
+    # Internal only: no host port and no startup dependency from api.
+
   api:
     build:
       context: .
@@ -35,6 +50,7 @@ services:
       DB_DSN: ${MYSQL_USER:-campusclaw}:${MYSQL_PASSWORD:-campusclaw}@tcp(db:3306)/${MYSQL_DATABASE:-campusclaw}?parseTime=true
       UPLOAD_DIR: /app/uploads
       QDRANT_URL: http://qdrant:6333
+      MCP_AUTH_TOKEN: ${MCP_AUTH_TOKEN:-}
     volumes:
       - ./uploads:/app/uploads
     depends_on:

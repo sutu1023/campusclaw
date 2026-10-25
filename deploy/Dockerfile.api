@@ -11,11 +11,13 @@ COPY docs ./docs
 
 RUN CGO_ENABLED=0 go build -o /out/api ./cmd/api \
  && CGO_ENABLED=0 go build -o /out/migrate ./cmd/migrate \
- && CGO_ENABLED=0 go build -o /out/backfill ./cmd/backfill
+ && CGO_ENABLED=0 go build -o /out/backfill ./cmd/backfill \
+ && CGO_ENABLED=0 go build -trimpath -o /out/mcpcheck ./cmd/mcpcheck
 
 FROM gcr.io/distroless/static-debian12
 COPY --from=build /out/api /api
 COPY --from=build /out/migrate /migrate
 COPY --from=build /out/backfill /backfill
+COPY --from=build /out/mcpcheck /mcpcheck
 EXPOSE 8080
 ENTRYPOINT ["/api"]

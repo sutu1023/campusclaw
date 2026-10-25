@@ -8,6 +8,7 @@ import (
 
 	"campusclaw/internal/auth"
 	"campusclaw/internal/chat"
+	"campusclaw/internal/config"
 	"campusclaw/internal/indexer"
 	"campusclaw/internal/retrieval"
 	"campusclaw/internal/store"
@@ -25,6 +26,7 @@ type Server struct {
 	MaxUploadBytes int64
 	EmbeddingDim   int
 	EmbeddingModel string
+	MCP            config.MCPConfig
 }
 
 // Router builds the application mux. Routes under /api (except login) require
@@ -52,6 +54,16 @@ func (s *Server) Router() http.Handler {
 	mux.Handle("POST /api/agents", authed(teacher(http.HandlerFunc(s.createAgent))))
 	mux.Handle("GET /api/agents/{id}", authed(http.HandlerFunc(s.getAgent)))
 	mux.Handle("PUT /api/agents/{id}", authed(teacher(http.HandlerFunc(s.updateAgent))))
+	mux.Handle("GET /api/mcp/audit", authed(teacher(http.HandlerFunc(s.listMCPAudit))))
+	mux.Handle("GET /api/mcp/servers", authed(teacher(http.HandlerFunc(s.listMCPServers))))
+	mux.Handle("POST /api/mcp/servers", authed(teacher(http.HandlerFunc(s.createMCPServer))))
+	mux.Handle("GET /api/mcp/servers/{id}", authed(teacher(http.HandlerFunc(s.getMCPServer))))
+	mux.Handle("PUT /api/mcp/servers/{id}", authed(teacher(http.HandlerFunc(s.updateMCPServer))))
+	mux.Handle("DELETE /api/mcp/servers/{id}", authed(teacher(http.HandlerFunc(s.deleteMCPServer))))
+	mux.Handle("POST /api/mcp/servers/{id}/connect", authed(teacher(http.HandlerFunc(s.connectMCPServer))))
+	mux.Handle("POST /api/mcp/servers/{id}/disconnect", authed(teacher(http.HandlerFunc(s.disconnectMCPServer))))
+	mux.Handle("POST /api/mcp/servers/{id}/approve", authed(teacher(http.HandlerFunc(s.approveMCPServer))))
+	mux.Handle("GET /api/mcp/servers/{id}/tools", authed(teacher(http.HandlerFunc(s.listMCPTools))))
 	mux.Handle("GET /api/skills", authed(http.HandlerFunc(s.listSkills)))
 	mux.Handle("POST /api/skills", authed(teacher(http.HandlerFunc(s.createSkill))))
 	mux.Handle("PUT /api/skills/{id}", authed(teacher(http.HandlerFunc(s.updateSkill))))

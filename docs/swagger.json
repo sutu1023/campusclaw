@@ -1,7 +1,7 @@
 {
     "swagger": "2.0",
     "info": {
-        "description": "CampusClaw 教学平台接口：认证、材料与知识库检索、智能体与技能、会话与流式问答。",
+        "description": "CampusClaw 教学平台接口：认证、材料与检索、智能体与技能、流式会话、教师 MCP 管理/发现确认/审计。",
         "title": "CampusClaw API",
         "contact": {},
         "version": "1.0"
@@ -357,6 +357,7 @@
                         "BearerAuth": []
                     }
                 ],
+                "description": "同时校验用户和班级；助手消息包含按发生顺序保存的安全 tool_calls 摘要，旧 NULL/无工具消息读取为 []，不回放中间 assistant/tool 协议消息。",
                 "produces": [
                     "application/json"
                 ],
@@ -408,7 +409,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "以 text/event-stream 返回 meta / delta / done / error 四类事件。",
+                "description": "首次 meta 含 status=ok/skill/citations；后续每轮 meta 保持原字段并追加新增 tool_calls（call_id/ref/round/status/text），状态为 ok/error/denied；工具记录全在首个 delta 前，无记录省略字段。done 指向已保存正文及摘要；工具局部失败不终止回答，主路径无正文失败用 error，部分生成沿用保存/done。",
                 "consumes": [
                     "application/json"
                 ],
@@ -860,6 +861,652 @@
                 }
             }
         },
+        "/api/mcp/audit": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "按时间/id 倒序，支持服务器和 ok/error/denied 筛选；只含安全摘要，不保存参数、提示词或密钥。可筛选本班已删除服务器的历史。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "分页查询本班 MCP 调用审计（仅教师）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "页码，默认 1",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "每页条数，默认 20，最大 100",
+                        "name": "page_size",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "本班服务器编号",
+                        "name": "server_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ok / error / denied",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.mcpAuditResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/mcp/servers": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "仅返回 has_token；MCP 密钥由服务器环境配置，应用登录 Bearer 不是 MCP Bearer。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "列出本班 MCP 服务器（仅教师）",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.mcpServerListResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "名称创建后不可改，删除后不可复用；只接受部署方批准的班级/名称/origin，不接受浏览器凭据。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "登记本班 MCP 服务器（仅教师）",
+                "parameters": [
+                    {
+                        "description": "名称与 Base URL，无密钥",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.mcpRegistrationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.mcpServerDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/mcp/servers/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "读取本班 MCP 服务器（仅教师）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "服务器编号",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.mcpServerDTO"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "修改地址/绑定立即失效且不自动重连；名称不可改，只能使用部署批准目标。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "修改本班 MCP 地址（仅教师）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "服务器编号",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "新 Base URL（name 可省略，但不可更改）",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.mcpRegistrationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.mcpServerDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "软删除保留名称、历史来源和调用审计，后续不能连接或调用。",
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "删除本班 MCP 服务器（仅教师）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "服务器编号",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/mcp/servers/{id}/approve": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "查看 tools 接口中的完整 pending_tools 与 approved_tools 后确认当前 hash；过期/并发确认返回 409，不会恢复失效连接。",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "确认本班 MCP 工具变更快照（仅教师）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "服务器编号",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "当前待确认快照 hash",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.mcpApprovalRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.mcpServerDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/mcp/servers/{id}/connect": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "使用服务端绑定凭据；完整发现整体替换。已有说明/Schema 变更返回 pending_approval，确认前不可用。远端 401 映射 503，不是应用登录失败。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "连接并发现本班 MCP 工具（仅教师）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "服务器编号",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.mcpServerDTO"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/mcp/servers/{id}/disconnect": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "幂等撤销新调用许可并清空可用/待确认目录；保留登记、批准历史及审计，不隐式重连。在途已获准的只读调用不撤回。",
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "断开本班 MCP 服务器（仅教师）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "服务器编号",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/mcp/servers/{id}/tools": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "tools 只含可调用目录；pending_tools/approved_tools 为完整变更比较内容，不是调用许可。不返回 MCP 凭据。",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "查看本班 MCP 工具完整目录（仅教师）",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "服务器编号",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.mcpToolsResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
+                    }
+                }
+            }
+        },
         "/api/me": {
             "get": {
                 "security": [
@@ -981,6 +1628,7 @@
                         "BearerAuth": []
                     }
                 ],
+                "description": "工具接受 knowledge_search 与 tool@server，去重后最多8项；在写事务内校验本班已连接的批准目录。缺失/他班服务器404，不可用/未知工具400，无部分写入，保留原文。",
                 "consumes": [
                     "application/json"
                 ],
@@ -1026,6 +1674,12 @@
                         "schema": {
                             "$ref": "#/definitions/httpapi.errorBody"
                         }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/httpapi.errorBody"
+                        }
                     }
                 }
             }
@@ -1037,6 +1691,7 @@
                         "BearerAuth": []
                     }
                 ],
+                "description": "先校验技能归属，再在同一写事务内验证 MCP 引用；断开/待确认/未发现400，缺失/他班404；失败保留原文、工具和绑定。",
                 "consumes": [
                     "application/json"
                 ],
@@ -1450,6 +2105,130 @@
                 }
             }
         },
+        "httpapi.mcpApprovalRequest": {
+            "type": "object",
+            "properties": {
+                "snapshot_hash": {
+                    "type": "string"
+                }
+            }
+        },
+        "httpapi.mcpAuditResponse": {
+            "type": "object",
+            "properties": {
+                "calls": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/store.MCPToolCall"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "page_size": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "httpapi.mcpRegistrationRequest": {
+            "type": "object",
+            "properties": {
+                "base_url": {
+                    "type": "string",
+                    "example": "http://mcp-demo:8090"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "campus-tools"
+                }
+            }
+        },
+        "httpapi.mcpServerDTO": {
+            "type": "object",
+            "properties": {
+                "approved_hash": {
+                    "type": "string"
+                },
+                "base_url": {
+                    "type": "string"
+                },
+                "class_id": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "has_token": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "last_error": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "pending_hash": {
+                    "type": "string"
+                },
+                "state": {
+                    "type": "string",
+                    "enum": [
+                        "disconnected",
+                        "connected",
+                        "pending_approval"
+                    ]
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "httpapi.mcpServerListResponse": {
+            "type": "object",
+            "properties": {
+                "servers": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/httpapi.mcpServerDTO"
+                    }
+                }
+            }
+        },
+        "httpapi.mcpToolsResponse": {
+            "type": "object",
+            "properties": {
+                "approved_tools": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/mcp.Tool"
+                    }
+                },
+                "change": {
+                    "$ref": "#/definitions/store.MCPDiscoveryChange"
+                },
+                "pending_tools": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/mcp.Tool"
+                    }
+                },
+                "server": {
+                    "$ref": "#/definitions/httpapi.mcpServerDTO"
+                },
+                "tools": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/mcp.Tool"
+                    }
+                }
+            }
+        },
         "httpapi.messageView": {
             "type": "object",
             "properties": {
@@ -1481,6 +2260,12 @@
                 "skill_name": {
                     "type": "string",
                     "example": "数学解题引导"
+                },
+                "tool_calls": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/toolrun.CallSummary"
+                    }
                 }
             }
         },
@@ -1671,6 +2456,20 @@
                 }
             }
         },
+        "mcp.Tool": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "inputSchema": {
+                    "type": "object"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "retrieval.Hit": {
             "type": "object",
             "properties": {
@@ -1764,6 +2563,88 @@
                 }
             }
         },
+        "store.MCPDiscoveryChange": {
+            "type": "object",
+            "properties": {
+                "approved_at": {
+                    "type": "string"
+                },
+                "approved_by": {
+                    "type": "integer"
+                },
+                "changed_tools": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "previous_hash": {
+                    "type": "string"
+                },
+                "server_id": {
+                    "type": "integer"
+                },
+                "snapshot_hash": {
+                    "type": "string"
+                }
+            }
+        },
+        "store.MCPToolCall": {
+            "type": "object",
+            "properties": {
+                "call_id": {
+                    "type": "string"
+                },
+                "class_id": {
+                    "type": "integer"
+                },
+                "completed_at": {
+                    "type": "string"
+                },
+                "conversation_id": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "duration_ms": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "question_message_id": {
+                    "type": "integer"
+                },
+                "ref": {
+                    "type": "string"
+                },
+                "round": {
+                    "type": "integer"
+                },
+                "server_id": {
+                    "type": "integer"
+                },
+                "server_name": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "text": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "integer"
+                }
+            }
+        },
         "store.Material": {
             "type": "object",
             "properties": {
@@ -1827,11 +2708,43 @@
                     "type": "string"
                 }
             }
+        },
+        "toolrun.CallSummary": {
+            "type": "object",
+            "properties": {
+                "call_id": {
+                    "type": "string",
+                    "maxLength": 128,
+                    "example": "q41-c1"
+                },
+                "ref": {
+                    "type": "string",
+                    "maxLength": 128,
+                    "example": "formula_hint@campus-tools"
+                },
+                "round": {
+                    "type": "integer",
+                    "maximum": 64,
+                    "minimum": 0
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "ok",
+                        "error",
+                        "denied"
+                    ]
+                },
+                "text": {
+                    "type": "string",
+                    "maxLength": 500
+                }
+            }
         }
     },
     "securityDefinitions": {
         "BearerAuth": {
-            "description": "输入 \"Bearer \u003ctoken\u003e\"",
+            "description": "输入登录接口返回的应用令牌 \"Bearer \u003ctoken\u003e\"；不是 MCP Bearer。MCP 凭据只在服务器环境配置，浏览器无需输入或获取。",
             "type": "apiKey",
             "name": "Authorization",
             "in": "header"

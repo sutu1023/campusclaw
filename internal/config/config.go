@@ -35,6 +35,8 @@ type Config struct {
 
 	VectorMinScore float64
 	RRFK           int
+
+	MCP MCPConfig
 }
 
 // Load reads configuration from the environment and validates required values.
@@ -72,6 +74,12 @@ func Load() (*Config, error) {
 	}
 	if c.TokenSecret == "" {
 		return nil, fmt.Errorf("TOKEN_SECRET is required and must not be hardcoded")
+	}
+
+	var err error
+	c.MCP, err = loadMCP(os.Getenv)
+	if err != nil {
+		return nil, err
 	}
 
 	// The chat gateway reuses the embedding gateway's API unless chat-specific

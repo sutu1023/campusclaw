@@ -51,14 +51,16 @@ func Open(ctx context.Context, dsn string, wait time.Duration) (*Store, error) {
 // Close releases the connection pool.
 func (s *Store) Close() error { return s.DB.Close() }
 
-// Migrate creates the schema (idempotent).
+// Migrate creates the schema and upgrades compatible legacy columns (idempotent).
 func (s *Store) Migrate(ctx context.Context) error {
-	for _, stmt := range schemaStatements {
-		if _, err := s.DB.ExecContext(ctx, stmt); err != nil {
-			return fmt.Errorf("schema statement failed: %w", err)
+	for _, statements := range [][]string{schemaStatements, mcpSchemaStatements} {
+		for _, stmt := range statements {
+			if _, err := s.DB.ExecContext(ctx, stmt); err != nil {
+				return fmt.Errorf("schema statement failed: %w", err)
+			}
 		}
 	}
-	return nil
+	return s.migrateMCPColumns(ctx)
 }
 
 // Seed inserts the demo classes, users, materials and one searchable entry per

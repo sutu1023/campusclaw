@@ -3,6 +3,7 @@
 import time
 
 from client import request
+from mcp_helpers import settings
 
 ORDER = 45
 METHOD = "POST"
@@ -55,4 +56,23 @@ def run(ctx):
         token=ctx["student_token"], json_body={"source": source},
     )
     results.append(("学生写技能返回 403", denied.status == 403))
+
+    server_name, _ = settings(ctx)
+    refs = ["knowledge_search", f"formula_hint@{server_name}", f"unit_convert@{server_name}"]
+    mcp_source = source.replace(name, f"MCP测试技能{suffix}").replace(
+        "工具：knowledge_search", "工具：" + ",".join(refs),
+    )
+    bound = request(ctx["base_url"], "POST", "/api/skills", token=ctx["teacher_token"], json_body={"source": mcp_source})
+    mcp_skill = bound.json()
+    results.append(("发现后 MCP 工具引用可保存", bound.status == 201 and mcp_skill.get("tools") == refs))
+    results.append(("MCP 技能完整原文保留", mcp_skill.get("source") == mcp_source))
+    ctx["mcp_skill_id"] = mcp_skill.get("id")
+    ctx["mcp_skill_source"] = mcp_source
+    ctx["mcp_refs"] = refs[1:]
+    if ctx["mcp_skill_id"]:
+        ctx["builtin_skill_id"] = ctx["skill_id"]
+        ctx["skill_id"] = ctx["mcp_skill_id"]
+        readback = request(ctx["base_url"], "GET", "/api/skills", token=ctx["teacher_token"])
+        found = next((s for s in readback.json().get("skills", []) if s.get("id") == ctx["mcp_skill_id"]), {})
+        results.append(("回读 MCP 技能原文与全部引用一致", found.get("source") == mcp_source and found.get("tools") == refs))
     return results

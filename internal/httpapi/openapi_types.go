@@ -5,6 +5,7 @@ import (
 
 	"campusclaw/internal/retrieval"
 	"campusclaw/internal/store"
+	"campusclaw/internal/toolrun"
 )
 
 // Response envelopes referenced by the OpenAPI annotations. They mirror the
@@ -111,13 +112,14 @@ type conversationListResponse struct {
 // messageView mirrors store.Message for OpenAPI without json.RawMessage, which
 // swag cannot resolve.
 type messageView struct {
-	ID             int64      `json:"id" example:"1"`
-	ConversationID int64      `json:"conversation_id" example:"1"`
-	Role           string     `json:"role" example:"user"`
-	Content        string     `json:"content" example:"移项怎么做"`
-	Citations      []citation `json:"citations"`
-	SkillName      string     `json:"skill_name" example:"数学解题引导"`
-	CreatedAt      time.Time  `json:"created_at"`
+	ID             int64                 `json:"id" example:"1"`
+	ConversationID int64                 `json:"conversation_id" example:"1"`
+	Role           string                `json:"role" example:"user"`
+	Content        string                `json:"content" example:"移项怎么做"`
+	Citations      []citation            `json:"citations"`
+	SkillName      string                `json:"skill_name" example:"数学解题引导"`
+	ToolCalls      []toolrun.CallSummary `json:"tool_calls"`
+	CreatedAt      time.Time             `json:"created_at"`
 }
 
 type conversationDetailResponse struct {

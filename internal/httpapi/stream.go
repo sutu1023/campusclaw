@@ -12,6 +12,7 @@ import (
 	"campusclaw/internal/retrieval"
 	"campusclaw/internal/skill"
 	"campusclaw/internal/store"
+	"campusclaw/internal/toolrun"
 )
 
 const (
@@ -31,7 +32,7 @@ type sendMessageRequest struct {
 // status code is fixed at 200 and failures are reported as an error event.
 //
 // @Summary      在会话中继续提问（SSE 流式）
-// @Description  以 text/event-stream 返回 meta / delta / done / error 四类事件。
+// @Description  首次 meta 含 status=ok/skill/citations；后续每轮 meta 保持原字段并追加新增 tool_calls（call_id/ref/round/status/text），状态为 ok/error/denied；工具记录全在首个 delta 前，无记录省略字段。done 指向已保存正文及摘要；工具局部失败不终止回答，主路径无正文失败用 error，部分生成沿用保存/done。
 // @Tags         conversations
 // @Accept       json
 // @Produce      text/event-stream
@@ -169,10 +170,23 @@ func (s *Server) sendMessage(w http.ResponseWriter, r *http.Request) {
 	}
 	messages = append(messages, chat.Message{Role: "user", Content: chat.BuildUser(question, evidences)})
 
+	engine := toolrun.Engine{Store: s.Store, Gateway: s.Chat, Config: s.MCP, OtherSecrets: []string{s.Chat.APIKey}}
+	plan := engine.Run(ctx, toolrun.Turn{
+		ClassID: user.ClassID, UserID: user.ID, ConversationID: conv.ID,
+		QuestionMessageID: questionMsgID, Skill: matched, Messages: messages,
+	}, func(calls []toolrun.CallSummary) {
+		writeSSE(w, flusher, "meta", map[string]any{
+			"status": "ok", "skill": skillPayload(matched), "citations": citations, "tool_calls": calls,
+		})
+	})
+	if ctx.Err() != nil {
+		return
+	}
+
 	hasEvidence := len(evidences) > 0
 	var final strings.Builder
 	var stripper chat.MarkerStripper
-	streamErr := s.Chat.CompleteMessagesStream(ctx, messages, func(text string) error {
+	streamErr := plan.StreamFinal(ctx, s.Chat, func(text string) error {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
@@ -204,12 +218,14 @@ func (s *Server) sendMessage(w http.ResponseWriter, r *http.Request) {
 	if matched != nil {
 		skillName = matched.Name
 	}
+	toolCallsJSON, _ := json.Marshal(plan.Calls)
 	assistantID, err := s.Store.AppendMessage(ctx, store.NewMessage{
 		ConversationID: conv.ID,
 		Role:           "assistant",
 		Content:        final.String(),
 		Citations:      citationsJSON,
 		SkillName:      skillName,
+		ToolCalls:      toolCallsJSON,
 	})
 	if err != nil {
 		writeSSE(w, flusher, "error", map[string]string{"error": "回答保存失败"})
@@ -238,7 +254,7 @@ func routeSkill(question string, candidates []store.Skill) *skill.Entry {
 	for _, c := range candidates {
 		entries = append(entries, skill.Entry{
 			ID: c.ID, Name: c.Name, Trigger: c.Trigger, Subject: c.Subject,
-			Description: c.Description, Enabled: c.Enabled,
+			Description: c.Description, Tools: append([]string(nil), c.Tools...), Enabled: c.Enabled,
 		})
 	}
 	return skill.Route(question, entries)

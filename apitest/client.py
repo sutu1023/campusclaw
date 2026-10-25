@@ -37,7 +37,8 @@ def request(base_url, method, path, token=None, json_body=None, timeout=60):
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             return Response(resp.status, dict(resp.headers), resp.read())
     except urllib.error.HTTPError as exc:
-        return Response(exc.code, dict(exc.headers or {}), exc.read())
+        with exc:
+            return Response(exc.code, dict(exc.headers or {}), exc.read())
 
 
 def read_sse(response):

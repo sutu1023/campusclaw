@@ -121,6 +121,7 @@ func (s *Server) createConversation(w http.ResponseWriter, r *http.Request) {
 // getConversation returns a conversation and its messages.
 //
 // @Summary      读取会话和消息
+// @Description  同时校验用户和班级；助手消息包含按发生顺序保存的安全 tool_calls 摘要，旧 NULL/无工具消息读取为 []，不回放中间 assistant/tool 协议消息。
 // @Tags         conversations
 // @Produce      json
 // @Security     BearerAuth

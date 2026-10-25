@@ -69,14 +69,9 @@ func setupEnv(t *testing.T) *testEnv {
 	if err != nil {
 		t.Fatalf("open store: %v", err)
 	}
-	if _, err := st.DB.ExecContext(ctx, `SET FOREIGN_KEY_CHECKS=0`); err != nil {
-		t.Fatalf("disable fk checks: %v", err)
-	}
-	if _, err := st.DB.ExecContext(ctx, `DROP TABLE IF EXISTS messages, conversations, tutor_agent_materials, tutor_agent_skills, skills, tutor_agents, knowledge_chunks, knowledge_entries, materials, sessions, users, classes`); err != nil {
+	// Child-first order preserves FK checks on every pooled connection.
+	if _, err := st.DB.ExecContext(ctx, `DROP TABLE IF EXISTS mcp_tool_calls, mcp_discovery_changes, mcp_discovery_snapshots, mcp_tools, mcp_servers, mcp_conversation_usage, messages, conversations, tutor_agent_materials, tutor_agent_skills, skills, tutor_agents, knowledge_chunks, knowledge_entries, materials, sessions, users, classes`); err != nil {
 		t.Fatalf("drop tables: %v", err)
-	}
-	if _, err := st.DB.ExecContext(ctx, `SET FOREIGN_KEY_CHECKS=1`); err != nil {
-		t.Fatalf("enable fk checks: %v", err)
 	}
 	if err := st.Migrate(ctx); err != nil {
 		t.Fatalf("migrate: %v", err)

@@ -53,7 +53,7 @@ def run_case(module, ctx):
     return results
 
 
-def render_report(entries, base_url, duration, failures):
+def render_report(entries, base_url, duration, failures, gateway_evidence="unspecified"):
     rows = []
     for rel, results in entries:
         rows.append(f"<tr class=\"case\"><td colspan=\"2\">{html.escape(rel)}</td></tr>")
@@ -89,6 +89,7 @@ def render_report(entries, base_url, duration, failures):
 <body>
 <h1>CampusClaw API 测试报告</h1>
 <p class="meta">目标：{html.escape(base_url)} · 生成时间：{datetime.now().isoformat(timespec="seconds")} · 用时 {duration:.2f}s · {summary}</p>
+<p class="meta">网关证据：{html.escape(gateway_evidence)}（deterministic-fixture / unspecified 不代表真实模型验收）</p>
 <table>
 <tbody>
 {chr(10).join(rows)}
@@ -103,6 +104,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--base-url", default=os.environ.get("APITEST_BASE_URL", "http://localhost:8080"))
     parser.add_argument("--report", default=str(DEFAULT_REPORT))
+    parser.add_argument("--gateway-evidence", choices=("unspecified", "deterministic-fixture", "real-gateway"), default="unspecified")
     args = parser.parse_args()
 
     ctx = {"base_url": args.base_url, "log": []}
@@ -128,7 +130,7 @@ def main():
 
     report_path = Path(args.report)
     report_path.parent.mkdir(parents=True, exist_ok=True)
-    report_path.write_text(render_report(entries, args.base_url, duration, failures), encoding="utf-8")
+    report_path.write_text(render_report(entries, args.base_url, duration, failures, args.gateway_evidence), encoding="utf-8")
     print(f"\nreport written to {report_path}")
     return 1 if failures else 0
 

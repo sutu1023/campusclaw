@@ -47,6 +47,15 @@ describe('readSSE', () => {
     ])
   })
 
+  it('handles CRLF and multibyte characters split at arbitrary byte boundaries', async () => {
+    const raw = new TextEncoder().encode('event: meta\r\ndata: {"tool_calls":[{"call_id":"q1-c1","text":"公式提示"}]}\r\n\r\nevent: delta\r\ndata: {"text":"你好"}\r\n\r\n')
+    let index = 0
+    const stream = new ReadableStream<Uint8Array>({ pull(controller) { if (index === raw.length) { controller.close() } else { controller.enqueue(raw.slice(index, ++index)) } } })
+    const events = await collect(stream)
+    expect(events.map((event) => event.event)).toEqual(['meta', 'delta'])
+    expect(events[1].data.text).toBe('你好')
+  })
+
   it('yields a final frame without a trailing blank line', async () => {
     const events = await collect(streamOf(['event: done\ndata: {"message_id":9}']))
     expect(events).toHaveLength(1)

@@ -10,6 +10,7 @@ type Entry struct {
 	Trigger     string
 	Subject     string
 	Description string
+	Tools       []string
 	Enabled     bool
 }
 

@@ -42,6 +42,7 @@ func (s *Server) listSkills(w http.ResponseWriter, r *http.Request) {
 // createSkill parses a skill file and stores it.
 //
 // @Summary      用技能文件新建技能
+// @Description  工具接受 knowledge_search 与 tool@server，去重后最多8项；在写事务内校验本班已连接的批准目录。缺失/他班服务器404，不可用/未知工具400，无部分写入，保留原文。
 // @Tags         skills
 // @Accept       json
 // @Produce      json
@@ -51,6 +52,7 @@ func (s *Server) listSkills(w http.ResponseWriter, r *http.Request) {
 // @Failure      400  {object}  errorBody
 // @Failure      401  {object}  errorBody
 // @Failure      403  {object}  errorBody
+// @Failure      404  {object}  errorBody
 // @Router       /api/skills [post]
 func (s *Server) createSkill(w http.ResponseWriter, r *http.Request) {
 	user, ok := currentUser(r)
@@ -72,6 +74,7 @@ func (s *Server) createSkill(w http.ResponseWriter, r *http.Request) {
 // updateSkill replaces a class-scoped skill from a new file.
 //
 // @Summary      用技能文件改写技能
+// @Description  先校验技能归属，再在同一写事务内验证 MCP 引用；断开/待确认/未发现400，缺失/他班404；失败保留原文、工具和绑定。
 // @Tags         skills
 // @Accept       json
 // @Produce      json
@@ -93,6 +96,9 @@ func (s *Server) updateSkill(w http.ResponseWriter, r *http.Request) {
 	id, ok := pathID(r)
 	if !ok {
 		writeError(w, http.StatusNotFound, "not found")
+		return
+	}
+	if _, err := s.Store.GetSkill(r.Context(), user.ClassID, id); !writeSkillError(w, err) {
 		return
 	}
 	ns, ok := decodeSkillRequest(w, r, user.ClassID)
@@ -167,6 +173,7 @@ func decodeSkillRequest(w http.ResponseWriter, r *http.Request, classID int64) (
 }
 
 func writeSkillError(w http.ResponseWriter, err error) bool {
+	var toolError *store.SkillToolError
 	switch {
 	case err == nil:
 		return true
@@ -174,6 +181,10 @@ func writeSkillError(w http.ResponseWriter, err error) bool {
 		writeError(w, http.StatusNotFound, "not found")
 	case errors.Is(err, store.ErrDuplicate):
 		writeError(w, http.StatusBadRequest, "name already exists in this class")
+	case errors.As(err, &toolError):
+		writeError(w, http.StatusBadRequest, toolError.Error())
+	case errors.Is(err, store.ErrInvalidMCP):
+		writeError(w, http.StatusBadRequest, "工具引用无效或超过上限")
 	default:
 		writeError(w, http.StatusInternalServerError, "failed to save skill")
 	}

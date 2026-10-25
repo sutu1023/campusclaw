@@ -29,6 +29,7 @@ type Message struct {
 	Content        string          `json:"content"`
 	Citations      json.RawMessage `json:"citations"`
 	SkillName      string          `json:"skill_name"`
+	ToolCalls      json.RawMessage `json:"tool_calls"`
 	CreatedAt      time.Time       `json:"created_at"`
 }
 
@@ -39,6 +40,7 @@ type NewMessage struct {
 	Content        string
 	Citations      json.RawMessage
 	SkillName      string
+	ToolCalls      json.RawMessage
 }
 
 // CreateConversation inserts a conversation with its placeholder title.
@@ -122,9 +124,10 @@ func (s *Store) AppendMessage(ctx context.Context, nm NewMessage) (int64, error)
 	if len(citations) == 0 {
 		citations = json.RawMessage("[]")
 	}
+	toolCalls := normalizeToolCalls(string(nm.ToolCalls))
 	res, err := s.DB.ExecContext(ctx,
-		`INSERT INTO messages (conversation_id, role, content, citations_json, skill_name) VALUES (?,?,?,?,?)`,
-		nm.ConversationID, nm.Role, nm.Content, string(citations), nm.SkillName)
+		`INSERT INTO messages (conversation_id, role, content, citations_json, skill_name, tool_calls_json) VALUES (?,?,?,?,?,?)`,
+		nm.ConversationID, nm.Role, nm.Content, string(citations), nm.SkillName, string(toolCalls))
 	if err != nil {
 		return 0, fmt.Errorf("append message: %w", err)
 	}
@@ -134,7 +137,7 @@ func (s *Store) AppendMessage(ctx context.Context, nm NewMessage) (int64, error)
 // ListMessages returns every message of a conversation in write order.
 func (s *Store) ListMessages(ctx context.Context, conversationID int64) ([]Message, error) {
 	rows, err := s.DB.QueryContext(ctx,
-		`SELECT id, conversation_id, role, content, citations_json, skill_name, created_at
+		`SELECT id, conversation_id, role, content, citations_json, skill_name, tool_calls_json, created_at
 		 FROM messages WHERE conversation_id=? ORDER BY id`, conversationID)
 	if err != nil {
 		return nil, fmt.Errorf("list messages: %w", err)
@@ -151,7 +154,7 @@ func (s *Store) RecentWindowMessages(ctx context.Context, conversationID int64, 
 		limit = 6
 	}
 	rows, err := s.DB.QueryContext(ctx,
-		`SELECT id, conversation_id, role, content, citations_json, skill_name, created_at
+		`SELECT id, conversation_id, role, content, citations_json, skill_name, tool_calls_json, created_at
 		 FROM messages WHERE conversation_id=? ORDER BY id DESC LIMIT ?`, conversationID, limit)
 	if err != nil {
 		return nil, fmt.Errorf("recent messages: %w", err)
@@ -203,8 +206,8 @@ func collectMessages(rows *sql.Rows) ([]Message, error) {
 	var out []Message
 	for rows.Next() {
 		var m Message
-		var citations sql.NullString
-		if err := rows.Scan(&m.ID, &m.ConversationID, &m.Role, &m.Content, &citations, &m.SkillName, &m.CreatedAt); err != nil {
+		var citations, toolCalls sql.NullString
+		if err := rows.Scan(&m.ID, &m.ConversationID, &m.Role, &m.Content, &citations, &m.SkillName, &toolCalls, &m.CreatedAt); err != nil {
 			return nil, err
 		}
 		if citations.Valid && citations.String != "" {
@@ -212,9 +215,18 @@ func collectMessages(rows *sql.Rows) ([]Message, error) {
 		} else {
 			m.Citations = json.RawMessage("[]")
 		}
+		m.ToolCalls = normalizeToolCalls(toolCalls.String)
 		out = append(out, m)
 	}
 	return out, rows.Err()
+}
+
+func normalizeToolCalls(raw string) json.RawMessage {
+	var calls []json.RawMessage
+	if json.Unmarshal([]byte(raw), &calls) != nil || calls == nil {
+		return json.RawMessage("[]")
+	}
+	return json.RawMessage(raw)
 }
 
 // EnsureConversationExists is a small helper used by tests and callers that

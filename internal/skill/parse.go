@@ -20,7 +20,7 @@ const (
 	MaxSubjectRunes     = 32
 	MaxDescriptionRunes = 2000
 
-	// ToolKnowledgeSearch is the only tool name accepted in a skill file.
+	// ToolKnowledgeSearch is the backward-compatible built-in reference.
 	ToolKnowledgeSearch = "knowledge_search"
 )
 
@@ -164,6 +164,7 @@ func parseTools(raw string) ([]string, error) {
 		return []string{}, nil
 	}
 	out := []string{}
+	seen := map[string]bool{}
 	for _, part := range strings.FieldsFunc(raw, func(r rune) bool {
 		return r == ',' || r == '，' || r == '、' || r == ';' || r == '；' || r == '|'
 	}) {
@@ -171,10 +172,17 @@ func parseTools(raw string) ([]string, error) {
 		if tool == "" {
 			continue
 		}
-		if tool != ToolKnowledgeSearch {
-			return nil, fmt.Errorf("工具只能为 %s，得到 %q", ToolKnowledgeSearch, tool)
+		if _, err := ParseToolReference(tool); err != nil {
+			return nil, err
 		}
+		if seen[tool] {
+			continue
+		}
+		seen[tool] = true
 		out = append(out, tool)
+		if len(out) > MaxTools {
+			return nil, fmt.Errorf("工具去重后不能超过 %d 项", MaxTools)
+		}
 	}
 	return out, nil
 }

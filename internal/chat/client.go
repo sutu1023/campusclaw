@@ -108,7 +108,8 @@ type streamRequest struct {
 type streamChunk struct {
 	Choices []struct {
 		Delta struct {
-			Content string `json:"content"`
+			Content   string            `json:"content"`
+			ToolCalls []json.RawMessage `json:"tool_calls"`
 		} `json:"delta"`
 	} `json:"choices"`
 }
@@ -118,10 +119,14 @@ type streamChunk struct {
 // non-SSE body (streaming unsupported), the whole answer is delivered as a
 // single delta so the caller's contract still holds.
 func (c *Client) CompleteMessagesStream(ctx context.Context, messages []Message, onDelta DeltaFunc) error {
+	return c.completeStream(ctx, streamRequest{Model: c.Model, Messages: messages, Stream: true}, onDelta, false)
+}
+
+func (c *Client) completeStream(ctx context.Context, payload any, onDelta DeltaFunc, strict bool) error {
 	if !c.Configured() {
 		return fmt.Errorf("chat gateway is not configured")
 	}
-	body, err := json.Marshal(streamRequest{Model: c.Model, Messages: messages, Stream: true})
+	body, err := json.Marshal(payload)
 	if err != nil {
 		return err
 	}
@@ -136,15 +141,27 @@ func (c *Client) CompleteMessagesStream(ctx context.Context, messages []Message,
 	}
 	resp, err := c.HTTP.Do(req)
 	if err != nil {
+		if strict {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+			return ErrToolDecision
+		}
 		return err
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
+		if strict {
+			return ErrToolDecision
+		}
 		msg, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
 		return fmt.Errorf("chat gateway status %d: %s", resp.StatusCode, strings.TrimSpace(string(msg)))
 	}
 
 	if !strings.Contains(resp.Header.Get("Content-Type"), "text/event-stream") {
+		if strict {
+			return ErrToolDecision
+		}
 		// Non-streaming fallback: one delta with the complete answer.
 		var out chatResponse
 		if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
@@ -171,6 +188,9 @@ func (c *Client) CompleteMessagesStream(ctx context.Context, messages []Message,
 		var probe map[string]json.RawMessage
 		if err := json.Unmarshal([]byte(payload), &probe); err == nil {
 			if raw, ok := probe["error"]; ok && string(raw) != "null" {
+				if strict {
+					return ErrToolDecision
+				}
 				return fmt.Errorf("chat gateway stream error: %s", string(raw))
 			}
 		}
@@ -178,7 +198,13 @@ func (c *Client) CompleteMessagesStream(ctx context.Context, messages []Message,
 		if err := json.Unmarshal([]byte(payload), &chunk); err != nil {
 			continue
 		}
-		if len(chunk.Choices) == 0 || chunk.Choices[0].Delta.Content == "" {
+		if len(chunk.Choices) == 0 {
+			continue
+		}
+		if strict && len(chunk.Choices[0].Delta.ToolCalls) > 0 {
+			return ErrToolDecision
+		}
+		if chunk.Choices[0].Delta.Content == "" {
 			continue
 		}
 		if err := onDelta(chunk.Choices[0].Delta.Content); err != nil {
@@ -187,6 +213,12 @@ func (c *Client) CompleteMessagesStream(ctx context.Context, messages []Message,
 		wrote = true
 	}
 	if err := scanner.Err(); err != nil {
+		if strict {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+			return ErrToolDecision
+		}
 		return err
 	}
 	if !wrote {

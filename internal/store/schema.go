@@ -94,7 +94,7 @@ var schemaStatements = []string{
 		name VARCHAR(32) NOT NULL,
 		trigger_text VARCHAR(120) NOT NULL,
 		description VARCHAR(2000) NOT NULL,
-		tools_json VARCHAR(255) NOT NULL DEFAULT '',
+		tools_json TEXT NOT NULL,
 		source_text MEDIUMTEXT NOT NULL,
 		subject_text VARCHAR(32) NOT NULL DEFAULT '',
 		enabled TINYINT(1) NOT NULL DEFAULT 1,
@@ -150,6 +150,7 @@ var schemaStatements = []string{
 		content MEDIUMTEXT NOT NULL,
 		citations_json MEDIUMTEXT NULL,
 		skill_name VARCHAR(64) NOT NULL DEFAULT '',
+		tool_calls_json MEDIUMTEXT NULL,
 		created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 		INDEX idx_msg_conv (conversation_id),
 		CONSTRAINT fk_msg_conv FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE

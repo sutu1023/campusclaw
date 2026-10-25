@@ -37,7 +37,7 @@ func TestParseValid(t *testing.T) {
 }
 
 func TestParseValidMultipleTools(t *testing.T) {
-	source := "名称：多工具\n适用条件：方程\n工具：knowledge_search，knowledge_search\n启用：否\n\n正文。\n"
+	source := "名称：多工具\n适用条件：方程\n工具：knowledge_search，formula_hint@campus-tools，knowledge_search\n启用：否\n\n正文。\n"
 	p, err := Parse(source)
 	if err != nil {
 		t.Fatalf("parse: %v", err)

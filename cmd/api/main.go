@@ -42,12 +42,12 @@ func ensureIndexed(ctx context.Context, st *store.Store, idx *indexer.Indexer) e
 
 // @title           CampusClaw API
 // @version         1.0
-// @description     CampusClaw 教学平台接口：认证、材料与知识库检索、智能体与技能、会话与流式问答。
+// @description     CampusClaw 教学平台接口：认证、材料与检索、智能体与技能、流式会话、教师 MCP 管理/发现确认/审计。
 // @BasePath        /
 // @securityDefinitions.apikey BearerAuth
 // @in              header
 // @name            Authorization
-// @description     输入 "Bearer <token>"
+// @description     输入登录接口返回的应用令牌 "Bearer <token>"；不是 MCP Bearer。MCP 凭据只在服务器环境配置，浏览器无需输入或获取。
 func main() {
 	cfg, err := config.Load()
 	if err != nil {
@@ -62,6 +62,9 @@ func main() {
 	defer st.Close()
 	if err := st.Migrate(ctx); err != nil {
 		log.Fatalf("migrate: %v", err)
+	}
+	if err := st.InvalidateMCPConnections(ctx); err != nil {
+		log.Fatalf("invalidate MCP connections: %v", err)
 	}
 	if err := st.Seed(ctx); err != nil {
 		log.Fatalf("seed: %v", err)
@@ -90,6 +93,7 @@ func main() {
 		MaxUploadBytes: cfg.MaxUploadBytes,
 		EmbeddingDim:   cfg.EmbeddingDim,
 		EmbeddingModel: cfg.EmbeddingModel,
+		MCP:            cfg.MCP,
 	}
 
 	// Periodically drop expired sessions.

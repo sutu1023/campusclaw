@@ -5,7 +5,10 @@
 // never placed in the URL. A 401 clears the token and notifies the app so it
 // can route back to the login page.
 
+import { ref } from 'vue'
+
 const TOKEN_KEY = 'campusclaw_token'
+export const sessionRole = ref('')
 
 export class UnauthorizedError extends Error {
   constructor() {
@@ -19,6 +22,7 @@ export function getToken(): string | null {
 }
 
 export function setToken(token: string | null): void {
+  sessionRole.value = ''
   if (token) {
     localStorage.setItem(TOKEN_KEY, token)
   } else {
@@ -112,6 +116,92 @@ export interface Citation {
   end_offset: number
 }
 
+export type ToolStatus = 'ok' | 'error' | 'denied'
+export interface ToolCallSummary {
+  call_id: string
+  ref: string
+  round: number
+  status: ToolStatus
+  text: string
+}
+export type McpState = 'disconnected' | 'connected' | 'pending_approval'
+export interface McpServer {
+  id: number
+  class_id: number
+  name: string
+  base_url: string
+  state: McpState
+  has_token: boolean
+  approved_hash?: string
+  pending_hash?: string
+  last_error?: string
+  created_at: string
+  updated_at: string
+}
+export interface McpTool {
+  name: string
+  description: string
+  inputSchema: Record<string, unknown>
+}
+export interface McpChange {
+  id: number
+  server_id: number
+  previous_hash: string
+  snapshot_hash: string
+  changed_tools: string[]
+  created_at: string
+  approved_by?: number
+  approved_at?: string
+}
+export interface McpDirectory {
+  server: McpServer
+  tools: McpTool[]
+  pending_tools?: McpTool[]
+  approved_tools?: McpTool[]
+  change?: McpChange
+}
+export interface McpAuditCall extends ToolCallSummary {
+  id: number
+  class_id: number
+  server_id: number
+  server_name: string
+  user_id: number
+  conversation_id: number
+  question_message_id: number
+  duration_ms: number
+  created_at: string
+  completed_at?: string
+}
+export interface McpAuditPage {
+  calls: McpAuditCall[]
+  total: number
+  page: number
+  page_size: number
+}
+
+export async function loadSessionRole(): Promise<string> {
+  const token = getToken()
+  if (!token) { sessionRole.value = ''; return '' }
+  const data = await apiJSON<{ user: { role: string } }>('/api/me')
+  if (getToken() !== token) { return '' }
+  sessionRole.value = data.user.role
+  return sessionRole.value
+}
+
+// Preserve first-arrival order within each round; repeated IDs update in place.
+// Malformed metadata never becomes UI state or an executable message.
+export function mergeToolCalls(current: ToolCallSummary[], incoming: unknown): ToolCallSummary[] {
+  const merged = new Map(current.map((call) => [call.call_id, call]))
+  if (!Array.isArray(incoming)) { return [...merged.values()] }
+  for (const value of incoming) {
+    if (!value || typeof value !== 'object') { continue }
+    const call = value as Partial<ToolCallSummary>
+    if (typeof call.call_id !== 'string' || !call.call_id || call.call_id.length > 128 || typeof call.ref !== 'string' || call.ref.length > 128 || typeof call.text !== 'string' || [...call.text].length > 500 || !Number.isInteger(call.round) || Number(call.round) < 0 || Number(call.round) > 64 || !['ok', 'error', 'denied'].includes(String(call.status))) { continue }
+    merged.set(call.call_id, { call_id: call.call_id, ref: call.ref, round: Number(call.round), status: call.status as ToolStatus, text: call.text })
+  }
+  return [...merged.values()].sort((a, b) => a.round - b.round)
+}
+
 export interface ChatMessage {
   id: number
   conversation_id: number
@@ -119,6 +209,7 @@ export interface ChatMessage {
   content: string
   citations: Citation[]
   skill_name: string
+  tool_calls?: ToolCallSummary[]
   created_at: string
 }
 
@@ -163,25 +254,22 @@ export async function* readSSE(stream: ReadableStream<Uint8Array>): AsyncGenerat
   const reader = stream.getReader()
   const decoder = new TextDecoder()
   let buffer = ''
-  for (;;) {
-    const { value, done } = await reader.read()
-    if (done) {
-      break
-    }
-    buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, '\n')
-    let index: number
-    while ((index = buffer.indexOf('\n\n')) >= 0) {
-      const block = buffer.slice(0, index)
-      buffer = buffer.slice(index + 2)
-      const event = parseSseBlock(block)
-      if (event) {
-        yield event
+  try {
+    for (;;) {
+      const { value, done } = await reader.read()
+      if (done) { break }
+      // Normalize after joining: CR and LF may arrive in different chunks.
+      buffer = (buffer + decoder.decode(value, { stream: true })).replace(/\r\n/g, '\n')
+      let index: number
+      while ((index = buffer.indexOf('\n\n')) >= 0) {
+        const block = buffer.slice(0, index)
+        buffer = buffer.slice(index + 2)
+        const event = parseSseBlock(block)
+        if (event) { yield event }
       }
     }
-  }
-  buffer += decoder.decode().replace(/\r\n/g, '\n')
-  const tail = parseSseBlock(buffer)
-  if (tail) {
-    yield tail
-  }
+    buffer = (buffer + decoder.decode()).replace(/\r\n/g, '\n')
+    const tail = parseSseBlock(buffer)
+    if (tail) { yield tail }
+  } finally { reader.releaseLock() }
 }
